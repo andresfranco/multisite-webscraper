@@ -13,18 +13,18 @@ Production-ready web scraper for multiple tech websites. Extracts articles with 
 ## Quick Start
 
 ### Install
-\\\ash
+```bash
 git clone https://github.com/andresfranco/multisite-webscraper.git
 cd multisite-webscraper
 pip install requests beautifulsoup4 sqlalchemy cloudscraper pytest
-\\\
+```
 
 ### Run
-\\\ash
+```bash
 python main.py --urls https://realpython.com/ https://www.freecodecamp.org/news https://www.datacamp.com/blog
 python main.py --urls https://realpython.com/ --workers 3 --mode debug
 python main.py --help
-\\\
+```
 
 ---
 
@@ -44,11 +44,11 @@ Each article: Title, Author(s), Date, URL
 
 ## CLI Options
 
-\\\
+```
 --urls URL [URL ...]      Required. URLs to scrape
 --workers N               Optional. Threads (default: 5)
 --mode normal|debug       Optional. Verbosity (default: normal)
-\\\
+```
 
 See [docs/06_CLI_INTERFACE.md](docs/06_CLI_INTERFACE.md) for examples.
 
@@ -56,15 +56,15 @@ See [docs/06_CLI_INTERFACE.md](docs/06_CLI_INTERFACE.md) for examples.
 
 ## Project Layout
 
-\\\
+```
 main.py                 # Entry point
 webscraper_core/        # Core logic
   scrapers/            # Site-specific extractors
-  models/              # ORM models  
+  models/              # ORM models
   repositories/        # Data access
 tests/                 # 32 tests (all passing)
 docs/                  # 15 docs
-\\\
+```
 
 ---
 
@@ -94,11 +94,11 @@ See [docs/01_PROJECT_PLAN.md](docs/01_PROJECT_PLAN.md)
 
 ## Testing
 
-\\\ash
+```bash
 pytest tests/ -v                  # All tests
 pytest tests/test_scraper.py -v   # Specific
 cd tests && python verify_scrape.py  # Verify extraction
-\\\
+```
 
 **Results**: 32/32 passing
 - 23 unit tests
@@ -110,10 +110,10 @@ cd tests && python verify_scrape.py  # Verify extraction
 
 | Issue | Solution |
 |-------|----------|
-| No articles | Check internet, verify URLs, run \--mode debug\ |
-| DB errors | Delete \scraper_data.db\ and re-run |
-| Import errors | \pip install -r requirements.txt\ |
-| Overload | Use \--workers 2\ |
+| No articles | Check internet, verify URLs, run `--mode debug` |
+| DB errors | Delete `scraper_data.db` and re-run |
+| Import errors | `pip install -r requirements.txt` |
+| Overload | Use `--workers 2` |
 
 ---
 
@@ -145,7 +145,7 @@ Python 3.12+ | BeautifulSoup4 | SQLAlchemy 2.0+ | SQLite | pytest | ThreadPoolEx
 1. Fork repo
 2. Create feature branch
 3. Add tests
-4. Run \pytest tests/ -v\
+4. Run `pytest tests/ -v`
 5. Submit PR
 
 ---
