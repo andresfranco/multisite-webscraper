@@ -59,26 +59,19 @@ def run(url: str):
         print(f"  Errors: {result['errors']}")
 
 
-def _save_articles_to_db(articles: List[dict], url: str) -> Dict:
+def _save_articles_to_db(articles: List[dict], url: str, session) -> Dict:
     """Save scraped articles to the database.
     
     Args:
         articles: List of article dictionaries from scraper
         url: Source URL (for tracking)
+        session: Database session (shared across worker threads)
         
     Returns:
         Dictionary with statistics: {created, skipped, errors}
     """
     try:
-        # Initialize database
-        SessionLocal = create_connection('scraper_data.db')
-        if SessionLocal is None:
-            return {'created': 0, 'skipped': 0, 'errors': len(articles)}
-        
-        create_tables()
-        session = SessionLocal()
-        
-        # Initialize repositories
+        # Initialize repositories with the provided session
         author_repo = AuthorRepository(session)
         article_repo = ArticleRepository(session)
         
@@ -123,7 +116,6 @@ def _save_articles_to_db(articles: List[dict], url: str) -> Dict:
                 errors += 1
                 continue
         
-        session.close()
         return {'created': created, 'skipped': skipped, 'errors': errors}
         
     except Exception as e:
@@ -131,8 +123,12 @@ def _save_articles_to_db(articles: List[dict], url: str) -> Dict:
         return {'created': 0, 'skipped': 0, 'errors': len(articles)}
 
 
-def _process_single(url: str) -> Dict:
+def _process_single(url: str, session) -> Dict:
     """Helper that scrapes URL, extracts articles, and saves to database.
+    
+    Args:
+        url: URL to process
+        session: Database session (shared across worker threads)
     
     Returns dictionary with statistics and metadata.
     """
@@ -172,8 +168,8 @@ def _process_single(url: str) -> Dict:
                 'errors': 1
             }
 
-        # Save to database
-        result = _save_articles_to_db(articles, url)
+        # Save to database using shared session
+        result = _save_articles_to_db(articles, url, session)
         
         return {
             'url': url,
@@ -197,27 +193,43 @@ def _process_single(url: str) -> Dict:
 
 def run_many(urls: List[str], max_workers: int = 5) -> List[Dict]:
     """Run scrape and save in parallel for a list of URLs using threads.
+    
+    Creates a single database session and shares it with all worker threads.
 
     Returns a list of result dictionaries with statistics.
     """
-    results = []
-    with ThreadPoolExecutor(max_workers=max_workers) as ex:
-        future_to_url = {ex.submit(_process_single, url): url for url in urls}
-        for fut in as_completed(future_to_url):
-            url = future_to_url[fut]
-            try:
-                res = fut.result()
-                results.append(res)
-            except Exception as exc:
-                results.append({
-                    'url': url,
-                    'status': 'error',
-                    'message': str(exc),
-                    'created': 0,
-                    'skipped': 0,
-                    'errors': 1
-                })
-    return results
+    # Initialize database once for all workers
+    SessionLocal = create_connection('scraper_data.db')
+    if SessionLocal is None:
+        print("Failed to create database connection")
+        return []
+    
+    create_tables()
+    session = SessionLocal()
+    
+    try:
+        results = []
+        with ThreadPoolExecutor(max_workers=max_workers) as ex:
+            # Pass the shared session to each worker
+            future_to_url = {ex.submit(_process_single, url, session): url for url in urls}
+            for fut in as_completed(future_to_url):
+                url = future_to_url[fut]
+                try:
+                    res = fut.result()
+                    results.append(res)
+                except Exception as exc:
+                    results.append({
+                        'url': url,
+                        'status': 'error',
+                        'message': str(exc),
+                        'created': 0,
+                        'skipped': 0,
+                        'errors': 1
+                    })
+        return results
+    finally:
+        # Close session after all workers are done
+        session.close()
 
 
 def aggregate_results(results: List[Dict]) -> Dict:
