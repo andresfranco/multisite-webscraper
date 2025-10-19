@@ -348,6 +348,150 @@ print(f"Error processing article: {e}")
 - Each worker handles one URL
 - Total time ≈ max(individual_times) + threading_overhead
 
+---
+
+## CLI Interface (NEW - October 19, 2025)
+
+### Overview
+
+The application features a command-line interface (CLI) built with Python's `argparse` module, providing users with flexible control over scraper execution without modifying code.
+
+### CLI Entry Point: `main.py`
+
+**Argument Parser Setup:**
+```python
+parser = argparse.ArgumentParser(
+    description='Tech Trends Database Scraper - Multi-Site Web Scraping Tool',
+    formatter_class=argparse.RawDescriptionHelpFormatter,
+    epilog='[Examples included]'
+)
+```
+
+### Supported Arguments
+
+**1. `--urls` (Required)**
+```python
+parser.add_argument(
+    '--urls',
+    nargs='+',
+    required=True,
+    help='One or more full URLs of the websites you want to scrape.'
+)
+```
+- Accepts one or more URL strings
+- Multiple values space-separated
+- Required - program exits with error if missing
+
+**2. `--workers` (Optional)**
+```python
+parser.add_argument(
+    '--workers',
+    type=int,
+    default=5,
+    help='Number of concurrent worker threads to use for scraping. (Default: 5)'
+)
+```
+- Type: Integer
+- Default: 5
+- Used in: `run_many_and_aggregate(urls, max_workers=workers)`
+
+**3. `--mode` (Optional)**
+```python
+parser.add_argument(
+    '--mode',
+    choices=['normal', 'debug'],
+    default='normal',
+    help="Set the output mode. 'normal' for standard output, 'debug' for verbose logging. (Default: normal)"
+)
+```
+- Type: String with restricted choices
+- Choices: 'normal' or 'debug'
+- Default: 'normal'
+- Debug mode displays: CLI configuration, enabled indicator, verbose logging
+
+### CLI Execution Flow
+
+```
+1. Parse arguments
+   ├─ Extract --urls (required)
+   ├─ Extract --workers (default: 5)
+   └─ Extract --mode (default: 'normal')
+   
+2. Display mode indicator
+   └─ If --mode debug: show configuration and verbose banner
+   
+3. Run scraper
+   ├─ Call run_many_and_aggregate(urls, max_workers=workers)
+   ├─ Single database session created for all workers
+   ├─ Results aggregated across threads
+   └─ Return statistics
+   
+4. Display results
+   ├─ Detailed results per website
+   ├─ Aggregated statistics
+   └─ Success/failure status
+```
+
+### Usage Examples
+
+```bash
+# Single website with defaults
+python main.py --urls https://realpython.com/
+
+# Multiple websites
+python main.py --urls https://realpython.com/ https://www.freecodecamp.org/news
+
+# Custom worker threads
+python main.py --urls https://realpython.com/ --workers 3
+
+# Debug mode for verbose output
+python main.py --urls https://realpython.com/ --mode debug
+
+# All parameters
+python main.py --urls https://realpython.com/ https://www.freecodecamp.org/news https://www.datacamp.com/blog --workers 4 --mode debug
+
+# Help
+python main.py --help
+```
+
+### Debug Mode Output
+
+When `--mode debug` is specified:
+
+```
+======================================================================
+🔍 DEBUG MODE ENABLED - Verbose logging active
+======================================================================
+
+CLI Configuration:
+  URLs to scrape: 3
+  Worker threads: 5
+  Output mode: debug
+
+[... rest of normal output ...]
+```
+
+### Error Handling
+
+**Missing Required Argument:**
+```
+main.py: error: the following arguments are required: --urls
+```
+
+**Invalid Worker Value:**
+```
+main.py: error: argument --workers: invalid int value: 'abc'
+```
+
+**Invalid Mode Choice:**
+```
+main.py: error: argument --mode: invalid choice: 'verbose' (choose from normal, debug)
+```
+
+For comprehensive CLI documentation, see [06_CLI_INTERFACE.md](06_CLI_INTERFACE.md)
+
+---
+
 ### Database Deduplication
 - URL lookup O(log n) with proper indexing
 - Prevents duplicate inserts
@@ -400,5 +544,5 @@ python tests/verify_datacamp_db.py
 
 ---
 
-**Last Updated**: October 18, 2025  
+**Last Updated**: October 19, 2025  
 **Status**: Complete and Production Ready
