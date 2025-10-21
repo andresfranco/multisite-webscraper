@@ -1,18 +1,22 @@
-{% extends "base.html" %}
-
-{% block title %}Scraped Articles Grid{% endblock %}
-
-{% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/grid.css') }}" />
-{% endblock %}
-
-{% block content %}
+{% extends "base.html" %} {% block title %}Article Library - Web Scraper{%
+endblock %} {% block extra_css %}
+<link
+    rel="stylesheet"
+    href="{{ url_for('static', filename='css/grid.css') }}"
+/>
+<link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+/>
+{% endblock %} {% block content %}
 <div class="navbar">
     <div class="navbar-container">
-        <h1 class="navbar-brand">📰 Scraped Articles</h1>
+        <h1 class="navbar-brand">
+            <i class="fas fa-book"></i> Article Library
+        </h1>
         <nav class="nav-links">
-            <a href="/">← Back to Home</a>
-            <a href="/grid">Refresh Grid</a>
+            <a href="/"><i class="fas fa-arrow-left"></i> Back to Scraper</a>
+            <a href="/grid"><i class="fas fa-sync-alt"></i> Refresh</a>
         </nav>
     </div>
 </div>
@@ -21,93 +25,133 @@
     <!-- Header with stats and actions -->
     <div class="header">
         <div>
-            <h1>Article Collection</h1>
+            <h1><i class="fas fa-book-open"></i> Your Articles</h1>
         </div>
         <div class="header-stats">
             <div class="stat-badge">
-                Total: <span id="totalCount">0</span> articles
+                <i class="fas fa-newspaper"></i> Total
+                <span id="totalCount">0</span>
             </div>
             <div class="stat-badge">
-                Authors: <span id="authorCount">0</span>
+                <i class="fas fa-pen-fancy"></i> Authors
+                <span id="authorCount">0</span>
             </div>
         </div>
         <div class="action-buttons">
-            <a href="/" class="btn btn-primary">🔍 Scrape More</a>
-            <button id="clearAllBtn" class="btn btn-danger">
-                🗑️ Clear All
+            <a href="/" class="btn btn-primary"
+                ><i class="fas fa-search"></i> Scrape More</a
+            >
+            <button id="clearAllBtn" class="btn btn-secondary">
+                <i class="fas fa-trash-alt"></i> Clear All
             </button>
         </div>
     </div>
 
     <!-- Search and filter section -->
     <div class="search-box">
-        <input
-            type="text"
-            id="searchInput"
-            class="search-input"
-            placeholder="Search articles by title or author..."
-        />
+        <div class="search-input-wrapper">
+            <input
+                type="text"
+                id="searchInput"
+                class="search-input"
+                placeholder="Search articles by title or author..."
+            />
+        </div>
         <div class="filter-controls">
             <button class="filter-btn active" data-filter="all">
-                All Articles
+                <i class="fas fa-list"></i> All Articles
             </button>
             <button class="filter-btn" data-filter="recent">
-                Recent
+                <i class="fas fa-history"></i> Recent
             </button>
             <button class="filter-btn" data-filter="today">
-                Today
+                <i class="fas fa-calendar-today"></i> Today
             </button>
         </div>
     </div>
 
     <!-- Error message (if any) -->
     {% if error %}
-    <div class="error-message">⚠️ {{ error }}</div>
+    <div class="error-message">
+        <i class="fas fa-exclamation-triangle"></i>
+        <span>{{ error }}</span>
+    </div>
     {% endif %}
 
     <!-- Articles grid -->
     <div id="articleGrid" class="grid">
-        {% if articles %}
-            {% for article in articles %}
-            <div class="card" data-article-id="{{ article.id }}">
-                <div class="card-header">
-                    <h3 class="card-title">{{ article.title }}</h3>
-                </div>
-                <div class="card-body">
-                    <div class="card-meta">
-                        <div class="meta-item">
-                            <span class="meta-label">Author:</span>
-                            <span class="meta-value">{{ article.author }}</span>
+        {% if articles %} {% for article in articles %}
+        <div class="card" data-article-id="{{ article.id }}">
+            <div class="card-header">
+                <h3 class="card-title">{{ article.title }}</h3>
+            </div>
+            <div class="card-body">
+                <div class="card-meta">
+                    <div class="meta-item">
+                        <span class="meta-icon"
+                            ><i class="fas fa-pen-fancy"></i
+                        ></span>
+                        <div>
+                            <div class="meta-label">Author</div>
+                            <div class="meta-value">
+                                {{ article.author if article.author else
+                                'Unknown' }}
+                            </div>
                         </div>
-                        <div class="meta-item">
-                            <span class="meta-label">Date:</span>
-                            <span class="meta-value">{{ article.date }}</span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-icon"
+                            ><i class="fas fa-calendar-alt"></i
+                        ></span>
+                        <div>
+                            <div class="meta-label">Date</div>
+                            <div class="meta-value">
+                                {{ article.date if article.date else 'Not
+                                specified' }}
+                            </div>
                         </div>
-                        <div class="meta-item">
-                            <span class="meta-label">Website:</span>
-                            <span class="meta-value">{{ article.website_url }}</span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-icon"
+                            ><i class="fas fa-globe"></i
+                        ></span>
+                        <div>
+                            <div class="meta-label">Source</div>
+                            <div class="meta-value">
+                                {{ article.website_url }}
+                            </div>
                         </div>
                     </div>
                 </div>
-</parameter>
-<new_text>
-
-                <div class="card-footer">
-                    <a href="{{ article.url }}" target="_blank" class="card-link">
-                        Read Article →
-                    </a>
-                </div>
             </div>
-            {% endfor %}
-        {% else %}
+
+            <div class="card-footer">
+                <span class="card-date"
+                    ><i class="fas fa-clock"></i> {{ article.date if
+                    article.date else 'Recently added' }}</span
+                >
+                <a
+                    href="{{ article.url }}"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="card-link"
+                >
+                    <i class="fas fa-external-link-alt"></i> Read Article
+                </a>
+            </div>
+        </div>
+        {% endfor %} {% else %}
         <div style="grid-column: 1/-1">
             <div class="empty-state">
-                <div class="empty-state-icon">📚</div>
+                <div class="empty-state-icon"><i class="fas fa-inbox"></i></div>
                 <div class="empty-state-title">No Articles Yet</div>
                 <div class="empty-state-text">
-                    No scraped articles found. Go back to the home page and start scraping!
+                    Start scraping to collect articles from your favorite
+                    sources
                 </div>
-                <a href="/" class="btn btn-primary">Start Scraping →</a>
+                <a href="/" class="btn btn-primary"
+                    ><i class="fas fa-search"></i> Start Scraping</a
+                >
             </div>
         </div>
         {% endif %}
@@ -116,18 +160,18 @@
     <!-- Loading indicator (hidden by default) -->
     <div id="loadingIndicator" class="loading" style="display: none">
         <div class="spinner"></div>
-        <p style="margin-top: 15px">Loading articles...</p>
+        <p><i class="fas fa-spinner fa-spin"></i> Loading articles...</p>
     </div>
 </div>
 
 <footer class="footer">
-    <p></p>
-        &copy; 2025 Multisite Web Scraper. Displaying
-        <span id="footerCount">0</span> articles.
+    <p>
+        <i class="fas fa-copyright"></i> 2025 Multisite Web Scraper. Displaying
+        <span id="footerCount">0</span> articles from your collection.
     </p>
 </footer>
-{% endblock %}
-
-{% block extra_js %}
+{% endblock %} {% block extra_js %}
 <script src="{{ url_for('static', filename='js/grid.js') }}"></script>
-{% endblock %}
+{% endblock %} ``` Now I need to update the CSS file to add styling for the new
+search input wrapper and icon. Here's the updated grid.css: ```
+multisite-webscraper\webui\static\css\grid.css

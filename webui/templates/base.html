@@ -3,15 +3,40 @@
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta
+            name="description"
+            content="Web Scraper - Collect and organize articles from multiple sources"
+        />
+        <meta name="theme-color" content="#f97316" />
         <title>{% block title %}Web Scraper{% endblock %}</title>
 
+        <!-- Favicon -->
+        <link
+            rel="icon"
+            type="image/svg+xml"
+            href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='75' font-size='75' fill='%23f97316'>📰</text></svg>"
+        />
+
         <!-- CSS Files -->
-        <link rel="stylesheet" href="{{ url_for('static', filename='css/variables.css') }}" />
+        <link
+            rel="stylesheet"
+            href="{{ url_for('static', filename='css/variables.css') }}"
+        />
+
+        <!-- Google Fonts for better typography -->
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
         {% block extra_css %}{% endblock %}
+
+        <!-- Smooth scroll behavior -->
+        <style>
+            html {
+                scroll-behavior: smooth;
+            }
+        </style>
     </head>
     <body>
-        {% block content %}{% endblock %}
-
-        {% block extra_js %}{% endblock %}
+        {% block content %}{% endblock %} {% block extra_js %}{% endblock %}
     </body>
 </html>

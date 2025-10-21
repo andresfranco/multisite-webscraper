@@ -4,15 +4,25 @@ endblock %} {% block extra_css %}
     rel="stylesheet"
     href="{{ url_for('static', filename='css/index.css') }}"
 />
+<link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+/>
 {% endblock %} {% block content %}
 <div class="container">
-    <h1>📰 Web Scraper</h1>
-    <p class="subtitle">Select URLs to scrape and collect articles</p>
+    <div class="header-section">
+        <h1><i class="fas fa-newspaper"></i> Article Scraper</h1>
+        <p class="subtitle">
+            Collect and organize articles from multiple sources with ease
+        </p>
+    </div>
 
     <form id="scraperForm">
         <div class="form-group">
-            <label>Select URLs to Scrape</label>
-            <div class="url-list">
+            <label for="urlList"
+                ><i class="fas fa-link"></i> Select Sources</label
+            >
+            <div class="url-list" id="urlList">
                 {% for url in supported_urls %}
                 <div class="url-item">
                     <input
@@ -24,11 +34,17 @@ endblock %} {% block extra_css %}
                     />
                     <span class="url-text">{{ url }}</span>
                     {% if 'realpython.com' in url %}
-                    <span class="url-badge">Real Python</span>
+                    <span class="url-badge"
+                        ><i class="fab fa-python"></i> Real Python</span
+                    >
                     {% elif 'freecodecamp.org' in url %}
-                    <span class="url-badge">FreeCodeCamp</span>
+                    <span class="url-badge"
+                        ><i class="fas fa-code"></i> FreeCodeCamp</span
+                    >
                     {% elif 'datacamp.com' in url %}
-                    <span class="url-badge">DataCamp</span>
+                    <span class="url-badge"
+                        ><i class="fas fa-chart-bar"></i> DataCamp</span
+                    >
                     {% endif %}
                 </div>
                 {% endfor %}
@@ -36,18 +52,25 @@ endblock %} {% block extra_css %}
         </div>
 
         <div class="form-group">
-            <label for="customUrl">Or Add Custom URL</label>
+            <label for="customUrl"
+                ><i class="fas fa-plus-circle"></i> Add Custom URLs</label
+            >
             <textarea
                 id="customUrl"
-                placeholder="Enter one URL per line (optional)&#10;e.g., https://example.com/blog"
+                placeholder="Enter one URL per line&#10;e.g., https://example.com/blog&#10;https://medium.com"
             ></textarea>
-            <p class="help-text">Custom URLs will be added to your selection</p>
+            <p class="help-text">
+                <i class="fas fa-lightbulb"></i> Custom URLs will be added to
+                your selection
+            </p>
             <div id="urlError" class="url-error"></div>
         </div>
 
         <div class="options">
             <div class="option-group">
-                <label for="workers">Worker Threads</label>
+                <label for="workers"
+                    ><i class="fas fa-sliders-h"></i> Worker Threads</label
+                >
                 <input
                     type="number"
                     id="workers"
@@ -56,27 +79,84 @@ endblock %} {% block extra_css %}
                     min="1"
                     max="10"
                 />
-                <p class="help-text">Number of parallel threads</p>
+                <p class="help-text">
+                    Number of parallel threads for faster scraping (1-10)
+                </p>
             </div>
         </div>
 
         <div class="button-group">
             <button type="submit" class="btn-primary" id="scrapeBtn">
-                🔍 Start Scraping
+                <i class="fas fa-search"></i> Start Scraping
             </button>
             <button type="button" class="btn-secondary" id="clearBtn">
-                🗑️ Clear Data
+                <i class="fas fa-trash-alt"></i> Clear Data
             </button>
         </div>
 
         <div id="status" class="status"></div>
+
+        <div class="stats">
+            <div class="stat-item">
+                <div class="stat-label"><i class="fas fa-list"></i> Queue</div>
+                <div class="stat-value" id="queueCount">0</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">
+                    <i class="fas fa-check-circle"></i> Processed
+                </div>
+                <div class="stat-value" id="processedCount">0</div>
+            </div>
+        </div>
     </form>
 
     <div class="link-group">
-        <a href="/grid">📊 View Grid</a>
-        <a href="/" onclick="location.reload()">🔄 Refresh</a>
+        <a href="/grid"><i class="fas fa-th"></i> View Articles</a>
+        <a href="/" onclick="location.reload(); return false;"
+            ><i class="fas fa-sync-alt"></i> Refresh</a
+        >
     </div>
 </div>
 {% endblock %} {% block extra_js %}
 <script src="{{ url_for('static', filename='js/index.js') }}"></script>
+<script>
+    // Update status messages with Font Awesome icons
+    document.addEventListener("DOMContentLoaded", function () {
+        const statusEl = document.getElementById("status");
+        const originalShow = statusEl.classList.add;
+
+        // Observer for status changes
+        const observer = new MutationObserver(function (mutations) {
+            mutations.forEach(function (mutation) {
+                if (mutation.attributeName === "class") {
+                    const classes = statusEl.className;
+                    if (classes.includes("success")) {
+                        statusEl.innerHTML =
+                            '<i class="fas fa-check-circle"></i> <span>' +
+                            statusEl.innerHTML
+                                .replace(/<i[^>]*>.*?<\/i>/g, "")
+                                .trim() +
+                            "</span>";
+                    } else if (classes.includes("error")) {
+                        statusEl.innerHTML =
+                            '<i class="fas fa-exclamation-circle"></i> <span>' +
+                            statusEl.innerHTML
+                                .replace(/<i[^>]*>.*?<\/i>/g, "")
+                                .trim() +
+                            "</span>";
+                    } else if (classes.includes("loading")) {
+                        statusEl.innerHTML =
+                            '<i class="fas fa-spinner fa-spin"></i> <span>' +
+                            statusEl.innerHTML
+                                .replace(/<i[^>]*>.*?<\/i>/g, "")
+                                .trim() +
+                            "</span>";
+                    }
+                }
+            });
+        });
+
+        observer.observe(statusEl, { attributes: true });
+    });
+</script>
 {% endblock %}
