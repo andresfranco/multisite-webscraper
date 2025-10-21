@@ -62,17 +62,6 @@ label {
     gap: var(--spacing-md);
 }
 
-label::before {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 20px;
-    height: 20px;
-    font-size: 14px;
-    color: var(--color-accent);
-    flex-shrink: 0;
-}
-
 .url-list {
     background: var(--color-background-secondary);
     border: 1px solid var(--color-border-light);
@@ -439,11 +428,6 @@ button {
     gap: var(--spacing-sm);
 }
 
-.stat-label::before {
-    font-size: 12px;
-    color: var(--color-accent);
-}
-
 .stat-value {
     color: var(--color-accent);
     font-weight: var(--font-weight-bold);
@@ -493,28 +477,6 @@ button {
 
 .url-error.show {
     display: block;
-}
-
-/* Icon styles for labels */
-[for="urlList"]::before {
-    content: "🔗";
-}
-
-[for="customUrl"]::before {
-    content: "➕";
-}
-
-[for="workers"]::before {
-    content: "⚙";
-}
-
-/* Stat label icons */
-.stats .stat-label:nth-child(1)::before {
-    content: "📋";
-}
-
-.stats .stat-label:nth-child(2)::before {
-    content: "✓";
 }
 
 /* Responsive Design */

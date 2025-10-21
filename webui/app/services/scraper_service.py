@@ -4,7 +4,7 @@ Scraper Service
 Service module for web scraping operations.
 """
 
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Optional
 from urllib.parse import urlparse
 from sqlalchemy.orm import Session
 
@@ -63,6 +63,96 @@ class ScraperService:
         """
         articles = self.article_repo.list_articles()
         return self._format_articles(articles)
+
+    def get_filtered_articles(
+        self,
+        search_query: str = "",
+        author: str = "",
+        date_from: str = "",
+        date_to: str = "",
+        website: str = "",
+    ) -> List[Dict]:
+        """
+        Retrieve articles with multiple filters applied.
+
+        Args:
+            search_query: Search term for title/author (case-insensitive)
+            author: Filter by author name (case-insensitive, partial match)
+            date_from: Start date for range filter (YYYY-MM-DD format)
+            date_to: End date for range filter (YYYY-MM-DD format)
+            website: Filter by website URL (case-insensitive, partial match)
+
+        Returns:
+            List of filtered article dictionaries
+        """
+        articles = self.article_repo.list_articles()
+        formatted_articles = self._format_articles(articles)
+
+        # Apply search filter
+        if search_query:
+            formatted_articles = [
+                a
+                for a in formatted_articles
+                if search_query in a["title"].lower()
+                or search_query in a["author"].lower()
+            ]
+
+        # Apply author filter (partial match)
+        if author:
+            formatted_articles = [
+                a for a in formatted_articles if author.lower() in a["author"].lower()
+            ]
+
+        # Apply date range filter
+        if date_from or date_to:
+            filtered_by_date = []
+            for a in formatted_articles:
+                article_date = a["date"]
+                if article_date == "N/A":
+                    continue
+
+                if date_from and article_date < date_from:
+                    continue
+                if date_to and article_date > date_to:
+                    continue
+
+                filtered_by_date.append(a)
+            formatted_articles = filtered_by_date
+
+        # Apply website filter (partial match)
+        if website:
+            formatted_articles = [
+                a
+                for a in formatted_articles
+                if website.lower() in a["website_url"].lower()
+            ]
+
+        return formatted_articles
+
+    def get_filter_options(self) -> Dict:
+        """
+        Get available filter options for articles.
+
+        Returns:
+            Dictionary containing min/max dates for range picker
+        """
+        articles = self.article_repo.list_articles()
+        formatted_articles = self._format_articles(articles)
+
+        # Extract date range
+        valid_dates = [a["date"] for a in formatted_articles if a["date"] != "N/A"]
+
+        if valid_dates:
+            min_date = min(valid_dates)
+            max_date = max(valid_dates)
+        else:
+            min_date = ""
+            max_date = ""
+
+        return {
+            "min_date": min_date,
+            "max_date": max_date,
+        }
 
     def clear_all_articles(self) -> int:
         """

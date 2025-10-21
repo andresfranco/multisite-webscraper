@@ -1,8 +1,9 @@
 # Initialize SQLite database using SQLAlchemy ORM
 from pathlib import Path
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.pool import NullPool
 
 # Import models - handle both relative and absolute imports
 try:
@@ -23,7 +24,25 @@ def create_connection(db_file: str):
     """
     global engine, SessionLocal
     try:
-        engine = create_engine(f"sqlite:///{db_file}", echo=False)
+        # SQLite doesn't benefit from connection pooling and can cause QueuePool overflow issues
+        # Use NullPool to create a new connection for each request and close immediately
+        engine = create_engine(
+            f"sqlite:///{db_file}",
+            echo=False,
+            poolclass=NullPool,  # Disable connection pooling for SQLite
+            connect_args={"timeout": 30},  # 30 second timeout for connection
+        )
+
+        # Enable optimizations for SQLite
+        @event.listens_for(engine, "connect")
+        def set_sqlite_pragma(dbapi_connection, connection_record):
+            """Set SQLite pragmas for better performance."""
+            cursor = dbapi_connection.cursor()
+            cursor.execute("PRAGMA journal_mode=WAL")  # Write-Ahead Logging
+            cursor.execute("PRAGMA synchronous=NORMAL")
+            cursor.execute("PRAGMA cache_size=10000")
+            cursor.close()
+
         SessionLocal = sessionmaker(bind=engine)
         return SessionLocal
     except SQLAlchemyError as e:

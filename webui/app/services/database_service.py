@@ -52,7 +52,7 @@ class DatabaseService:
     def session_scope(self):
         """
         Context manager for database session.
-        Automatically handles session cleanup.
+        Automatically handles session cleanup and resource management.
 
         Yields:
             Session: SQLAlchemy session object
@@ -68,7 +68,10 @@ class DatabaseService:
             session.close()
 
     def close(self) -> None:
-        """Close database connection."""
+        """Close database connection and cleanup resources."""
         if self.SessionLocal is not None:
-            # SQLAlchemy sessions don't need explicit closure for the factory
-            pass
+            # Dispose of all connections in the pool
+            if hasattr(self.SessionLocal, "kw") and "bind" in self.SessionLocal.kw:
+                engine = self.SessionLocal.kw["bind"]
+                engine.dispose()
+            self.SessionLocal = None

@@ -47,26 +47,78 @@ endblock %} {% block extra_css %}
         </div>
     </div>
 
-    <!-- Search and filter section -->
+    <!-- Filter section -->
     <div class="search-box">
-        <div class="search-input-wrapper">
-            <input
-                type="text"
-                id="searchInput"
-                class="search-input"
-                placeholder="Search articles by title or author..."
-            />
-        </div>
-        <div class="filter-controls">
-            <button class="filter-btn active" data-filter="all">
-                <i class="fas fa-list"></i> All Articles
-            </button>
-            <button class="filter-btn" data-filter="recent">
-                <i class="fas fa-history"></i> Recent
-            </button>
-            <button class="filter-btn" data-filter="today">
-                <i class="fas fa-calendar-today"></i> Today
-            </button>
+        <!-- Multiple Filters Section -->
+        <div class="filters-section">
+            <div class="filters-container">
+                <!-- Author Filter (Text Input) -->
+                <div class="filter-group">
+                    <label for="authorInput" class="filter-label">
+                        <i class="fas fa-pen-fancy"></i> Author
+                    </label>
+                    <input
+                        type="text"
+                        id="authorInput"
+                        class="filter-input"
+                        placeholder="Type author name..."
+                    />
+                </div>
+
+                <!-- Date Range Filter -->
+                <div class="filter-group">
+                    <label for="dateFromInput" class="filter-label">
+                        <i class="fas fa-calendar-alt"></i> Date From
+                    </label>
+                    <input
+                        type="date"
+                        id="dateFromInput"
+                        class="filter-input"
+                    />
+                </div>
+
+                <div class="filter-group">
+                    <label for="dateToInput" class="filter-label">
+                        <i class="fas fa-calendar-alt"></i> Date To
+                    </label>
+                    <input type="date" id="dateToInput" class="filter-input" />
+                </div>
+
+                <!-- Website Filter (Text Input) -->
+                <div class="filter-group">
+                    <label for="websiteInput" class="filter-label">
+                        <i class="fas fa-globe"></i> Website
+                    </label>
+                    <input
+                        type="text"
+                        id="websiteInput"
+                        class="filter-input"
+                        placeholder="Type website URL..."
+                    />
+                </div>
+
+                <!-- Pagination Selector -->
+                <div class="filter-group">
+                    <label for="perPageSelector" class="filter-label">
+                        <i class="fas fa-list"></i> Per Page
+                    </label>
+                    <select id="perPageSelector" class="filter-select">
+                        <option value="5">5 Items</option>
+                        <option value="10" selected>10 Items</option>
+                        <option value="20">20 Items</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="filter-actions">
+                <button id="searchBtn" class="btn btn-search">
+                    <i class="fas fa-search"></i> Search
+                </button>
+                <button id="clearFiltersBtn" class="btn btn-filter-clear">
+                    <i class="fas fa-times-circle"></i> Clear
+                </button>
+            </div>
         </div>
     </div>
 
@@ -77,6 +129,36 @@ endblock %} {% block extra_css %}
         <span>{{ error }}</span>
     </div>
     {% endif %}
+
+    <!-- Results info -->
+    <div class="results-info">
+        <span id="resultsText">Showing 0 articles</span>
+        <span
+            id="filterStatus"
+            class="filter-status"
+            style="display: none"
+        ></span>
+    </div>
+
+    <!-- Top Pagination Controls -->
+    <div
+        id="topPaginationContainer"
+        class="pagination-container"
+        style="display: none"
+    >
+        <div class="pagination-info">
+            <span id="topPaginationText">Page 1</span>
+        </div>
+        <div class="pagination-controls">
+            <button id="topPrevPageBtn" class="pagination-btn" disabled>
+                <i class="fas fa-chevron-left"></i> Previous
+            </button>
+            <div class="page-numbers" id="topPageNumbers"></div>
+            <button id="topNextPageBtn" class="pagination-btn" disabled>
+                Next <i class="fas fa-chevron-right"></i>
+            </button>
+        </div>
+    </div>
 
     <!-- Articles grid -->
     <div id="articleGrid" class="grid">
@@ -172,6 +254,4 @@ endblock %} {% block extra_css %}
 </footer>
 {% endblock %} {% block extra_js %}
 <script src="{{ url_for('static', filename='js/grid.js') }}"></script>
-{% endblock %} ``` Now I need to update the CSS file to add styling for the new
-search input wrapper and icon. Here's the updated grid.css: ```
-multisite-webscraper\webui\static\css\grid.css
+{% endblock %}

@@ -6,7 +6,7 @@ Factory function for creating and configuring Flask application instances.
 
 import sys
 from pathlib import Path
-from flask import Flask
+from flask import Flask, g
 
 # Add parent directory to path to import webscraper_core
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
@@ -58,9 +58,8 @@ def create_app(config=None):
     @app.before_request
     def inject_db_service():
         """Inject database service into request context."""
-        from flask import g
-
         g.db_service = app.db_service
+        g.db_sessions = []
 
     # Register blueprints
     app.register_blueprint(pages_bp)
@@ -71,8 +70,6 @@ def create_app(config=None):
         """Wrap view function to inject db_service."""
 
         def wrapper(*args, **kwargs):
-            from flask import g
-
             return view_func(g.db_service, *args, **kwargs)
 
         wrapper.__name__ = view_func.__name__
@@ -101,15 +98,16 @@ def create_app(config=None):
         app.logger.error(f"Server error: {error}")
         return jsonify({"success": False, "message": "Internal server error"}), 500
 
-    # Register teardown handler
+    # Register teardown handler to close all database sessions
     @app.teardown_appcontext
     def shutdown_session(exception=None):
-        """Close database session on app shutdown."""
-        from flask import g
-
-        if hasattr(g, "db_service"):
-            # Sessions are managed by the context manager in DatabaseService
-            pass
+        """Close all database sessions on app shutdown."""
+        if hasattr(g, "db_sessions"):
+            for session in g.db_sessions:
+                try:
+                    session.close()
+                except Exception as e:
+                    app.logger.warning(f"Error closing database session: {e}")
 
     return app
 

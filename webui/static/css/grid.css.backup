@@ -160,7 +160,11 @@ body {
 }
 
 .btn-primary:hover {
-    background: linear-gradient(135deg, var(--color-accent-dark) 0%, #c74911 100%);
+    background: linear-gradient(
+        135deg,
+        var(--color-accent-dark) 0%,
+        #c74911 100%
+    );
     transform: translateY(-2px);
     box-shadow: 0 4px 16px rgba(249, 115, 22, 0.4);
 }
@@ -205,6 +209,7 @@ body {
 }
 
 .grid {
+</parameter>
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
     gap: var(--spacing-2xl);
@@ -277,7 +282,6 @@ body {
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
-    line-clamp: 2;
 }
 
 .card-body {
@@ -477,6 +481,10 @@ body {
 }
 
 /* ===================================
+   Search Input Icon
+   =================================== */
+
+/* ===================================
    Multiple Filters Section
    =================================== */
 
@@ -602,12 +610,6 @@ body {
     display: inline-flex;
     align-items: center;
     gap: var(--spacing-sm);
-    border-radius: var(--radius-lg);
-    font-size: var(--font-size-base);
-    font-weight: var(--font-weight-semibold);
-    cursor: pointer;
-    transition: all var(--transition-base);
-    letter-spacing: 0.3px;
 }
 
 .btn-search:hover {
@@ -630,12 +632,6 @@ body {
     display: inline-flex;
     align-items: center;
     gap: var(--spacing-sm);
-    border-radius: var(--radius-lg);
-    font-size: var(--font-size-base);
-    font-weight: var(--font-weight-semibold);
-    cursor: pointer;
-    transition: all var(--transition-base);
-    letter-spacing: 0.3px;
 }
 
 .btn-filter-clear:hover {
@@ -781,9 +777,9 @@ body {
     }
 }
 
-/* Responsive Design */
-
-@media (max-width: 1024px) {
+/* Responsive Design */</parameter>
+</invoke>
+@media (max-width: var(--breakpoint-lg)) {
     .grid {
         grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
         gap: var(--spacing-xl);
@@ -803,7 +799,7 @@ body {
     }
 }
 
-@media (max-width: 768px) {
+@media (max-width: var(--breakpoint-md)) {
     .header {
         flex-direction: column;
         align-items: flex-start;
@@ -906,7 +902,7 @@ body {
     }
 }
 
-@media (max-width: 640px) {
+@media (max-width: var(--breakpoint-sm)) {
     .grid {
         grid-template-columns: 1fr;
         gap: var(--spacing-lg);
@@ -1007,4 +1003,4 @@ body {
         align-items: flex-start;
         gap: var(--spacing-sm);
     }
-}
+}</parameter>

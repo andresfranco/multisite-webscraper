@@ -1,33 +1,100 @@
 // ===================================
 // Grid Page JavaScript
+// Enhanced with Multiple Filters & Pagination
 // ===================================
 
-const searchInput = document.getElementById("searchInput");
-const filterButtons = document.querySelectorAll(".filter-btn");
+const authorInput = document.getElementById("authorInput");
+const dateFromInput = document.getElementById("dateFromInput");
+const dateToInput = document.getElementById("dateToInput");
+const websiteInput = document.getElementById("websiteInput");
+const perPageSelector = document.getElementById("perPageSelector");
+const searchBtn = document.getElementById("searchBtn");
+const clearFiltersBtn = document.getElementById("clearFiltersBtn");
 const articlesContainer = document.getElementById("articleGrid");
+const loadingIndicator = document.getElementById("loadingIndicator");
+const topPaginationContainer = document.getElementById(
+  "topPaginationContainer",
+);
+const topPrevPageBtn = document.getElementById("topPrevPageBtn");
+const topNextPageBtn = document.getElementById("topNextPageBtn");
+const topPageNumbersContainer = document.getElementById("topPageNumbers");
+const topPaginationText = document.getElementById("topPaginationText");
+const resultsText = document.getElementById("resultsText");
+const filterStatus = document.getElementById("filterStatus");
 
-let articlesData = [];
+let currentPage = 1;
+let currentPerPage = 10;
+let allArticles = [];
+let currentFilters = {
+  author: "",
+  date_from: "",
+  date_to: "",
+  website: "",
+};
 
 /**
  * Load articles on page load
  */
 document.addEventListener("DOMContentLoaded", async () => {
+  await loadFilters();
   await loadArticles();
 });
 
 /**
- * Load articles from API
+ * Load filter options from API
+ */
+async function loadFilters() {
+  try {
+    const response = await fetch("/api/article-filters");
+    const data = await response.json();
+
+    if (data.success && data.filters) {
+      if (data.filters.min_date) {
+        dateFromInput.min = data.filters.min_date;
+        dateFromInput.max = data.filters.max_date;
+      }
+      if (data.filters.max_date) {
+        dateToInput.min = data.filters.min_date;
+        dateToInput.max = data.filters.max_date;
+      }
+    }
+  } catch (error) {
+    console.error("Error loading filters:", error);
+  }
+}
+
+/**
+ * Load articles from API with current filters
  */
 async function loadArticles() {
   try {
-    document.getElementById("loadingIndicator").style.display = "block";
-    const response = await fetch("/api/articles");
+    showLoading(true);
+
+    // Build query parameters
+    const params = new URLSearchParams();
+    if (currentFilters.author) params.append("author", currentFilters.author);
+    if (currentFilters.date_from)
+      params.append("date_from", currentFilters.date_from);
+    if (currentFilters.date_to)
+      params.append("date_to", currentFilters.date_to);
+    if (currentFilters.website)
+      params.append("website", currentFilters.website);
+    params.append("page", currentPage);
+    params.append("per_page", currentPerPage);
+
+    const response = await fetch(`/api/articles?${params}`);
     const data = await response.json();
 
     if (data.success) {
-      articlesData = data.articles;
-      updateStats();
-      renderArticles(articlesData);
+      allArticles = data.articles;
+      const totalCount = data.total_count;
+      const totalPages = data.total_pages;
+
+      updateStats(totalCount);
+      renderArticles(allArticles);
+      updatePagination(data.page, data.per_page, totalPages, totalCount);
+      updateResultsInfo(totalCount, data.count);
+      updateFilterStatus();
     } else {
       showError("Failed to load articles");
     }
@@ -35,20 +102,68 @@ async function loadArticles() {
     console.error("Error loading articles:", error);
     showError("Error loading articles: " + error.message);
   } finally {
-    document.getElementById("loadingIndicator").style.display = "none";
+    showLoading(false);
+  }
+}
+
+/**
+ * Update results info display
+ * @param {number} totalCount - Total articles matching filters
+ * @param {number} displayCount - Articles on current page
+ */
+function updateResultsInfo(totalCount, displayCount) {
+  if (totalCount === 0) {
+    resultsText.textContent = "No articles found";
+  } else {
+    const start = (currentPage - 1) * currentPerPage + 1;
+    const end = Math.min(currentPage * currentPerPage, totalCount);
+    resultsText.textContent = `Showing ${start}–${end} of ${totalCount} articles`;
+  }
+}
+
+/**
+ * Update filter status indicator
+ */
+function updateFilterStatus() {
+  const activeFilters = [];
+
+  if (currentFilters.author)
+    activeFilters.push(`Author: "${currentFilters.author}"`);
+  if (currentFilters.date_from || currentFilters.date_to) {
+    const dateRange = `${currentFilters.date_from || "Any"} to ${currentFilters.date_to || "Any"}`;
+    activeFilters.push(`Date: ${dateRange}`);
+  }
+  if (currentFilters.website)
+    activeFilters.push(`Website: "${currentFilters.website}"`);
+
+  if (activeFilters.length > 0) {
+    filterStatus.textContent = `Filters applied: ${activeFilters.join(" • ")}`;
+    filterStatus.style.display = "inline";
+  } else {
+    filterStatus.style.display = "none";
   }
 }
 
 /**
  * Update statistics display
+ * @param {number} totalCount - Total articles in database
  */
-function updateStats() {
-  document.getElementById("totalCount").textContent = articlesData.length;
+function updateStats(totalCount) {
+  document.getElementById("totalCount").textContent = totalCount;
 
-  // Count unique authors
-  const uniqueAuthors = new Set(articlesData.map((a) => a.author));
-  document.getElementById("authorCount").textContent = uniqueAuthors.size;
-  document.getElementById("footerCount").textContent = articlesData.length;
+  // Count unique authors from all articles
+  const uniqueAuthors = new Set();
+  const response = fetch("/api/article-filters")
+    .then((r) => r.json())
+    .then((data) => {
+      if (data.success && data.filters && data.filters.authors) {
+        document.getElementById("authorCount").textContent =
+          data.filters.authors.filter((a) => a !== "Unknown").length;
+      }
+    })
+    .catch((e) => console.error("Error updating author count:", e));
+
+  document.getElementById("footerCount").textContent = totalCount;
 }
 
 /**
@@ -58,52 +173,188 @@ function updateStats() {
 function renderArticles(articles) {
   if (articles.length === 0) {
     articlesContainer.innerHTML = `
-            <div style="grid-column: 1/-1;">
-                <div class="empty-state">
-                    <div class="empty-state-icon">📚</div>
-                    <div class="empty-state-title">No Articles Yet</div>
-                    <div class="empty-state-text">
-                        No scraped articles found. Go back to the home page and start scraping!
-                    </div>
-                    <a href="/" class="btn btn-primary">Start Scraping →</a>
-                </div>
-            </div>
-        `;
+      <div style="grid-column: 1/-1;">
+        <div class="empty-state">
+          <div class="empty-state-icon"><i class="fas fa-inbox"></i></div>
+          <div class="empty-state-title">No Articles Found</div>
+          <div class="empty-state-text">
+            ${getEmptyStateMessage()}
+          </div>
+          <a href="/" class="btn btn-primary">
+            <i class="fas fa-search"></i> Start Scraping
+          </a>
+        </div>
+      </div>
+    `;
     return;
   }
 
   articlesContainer.innerHTML = articles
     .map(
       (article) => `
-            <div class="card" data-article-id="${article.id}">
-                <div class="card-header">
-                    <h3 class="card-title">${escapeHtml(article.title)}</h3>
-                </div>
-                <div class="card-body">
-                    <div class="card-meta">
-                        <div class="meta-item">
-                            <span class="meta-label">Author:</span>
-                            <span class="meta-value">${escapeHtml(article.author)}</span>
-                        </div>
-                        <div class="meta-item">
-                            <span class="meta-label">Date:</span>
-                            <span class="meta-value">${escapeHtml(formatDate(article.date))}</span>
-                        </div>
-                        <div class="meta-item">
-                            <span class="meta-label">Website:</span>
-                            <span class="meta-value">${escapeHtml(article.website_url)}</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="card-footer">
-                    <a href="${article.url}" target="_blank" class="card-link">
-                        Read Article →
-                    </a>
-                </div>
+      <div class="card" data-article-id="${article.id}">
+        <div class="card-header">
+          <h3 class="card-title">${escapeHtml(article.title)}</h3>
+        </div>
+        <div class="card-body">
+          <div class="card-meta">
+            <div class="meta-item">
+              <span class="meta-icon"><i class="fas fa-pen-fancy"></i></span>
+              <div>
+                <div class="meta-label">Author</div>
+                <div class="meta-value">${escapeHtml(article.author)}</div>
+              </div>
             </div>
-        `,
+            <div class="meta-item">
+              <span class="meta-icon"><i class="fas fa-calendar-alt"></i></span>
+              <div>
+                <div class="meta-label">Date</div>
+                <div class="meta-value">${escapeHtml(formatDate(article.date))}</div>
+              </div>
+            </div>
+            <div class="meta-item">
+              <span class="meta-icon"><i class="fas fa-globe"></i></span>
+              <div>
+                <div class="meta-label">Source</div>
+                <div class="meta-value">${escapeHtml(article.website_url)}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card-footer">
+          <a href="${article.url}" target="_blank" rel="noopener noreferrer" class="card-link">
+            <i class="fas fa-external-link-alt"></i> Read Article
+          </a>
+        </div>
+      </div>
+    `,
     )
     .join("");
+}
+
+/**
+ * Get appropriate empty state message
+ * @returns {string} Empty state message
+ */
+function getEmptyStateMessage() {
+  if (
+    currentFilters.author ||
+    currentFilters.date_from ||
+    currentFilters.date_to ||
+    currentFilters.website
+  ) {
+    return "No articles match your filters. Try adjusting your search criteria.";
+  }
+  return "Start scraping to collect articles from your favorite sources";
+}
+
+/**
+ * Update pagination controls
+ * @param {number} page - Current page number
+ * @param {number} perPage - Items per page
+ * @param {number} totalPages - Total number of pages
+ * @param {number} totalCount - Total number of articles
+ */
+function updatePagination(page, perPage, totalPages, totalCount) {
+  if (totalCount === 0) {
+    topPaginationContainer.style.display = "none";
+    return;
+  }
+
+  topPaginationContainer.style.display = "flex";
+  currentPage = page;
+  currentPerPage = perPage;
+
+  // Update pagination text
+  topPaginationText.textContent = `Page ${page} of ${totalPages}`;
+
+  // Update previous button
+  topPrevPageBtn.disabled = page === 1;
+
+  // Update next button
+  topNextPageBtn.disabled = page === totalPages;
+
+  // Generate page numbers
+  generatePageNumbers(page, totalPages);
+}
+
+/**
+ * Generate page number buttons
+ * @param {number} currentPageNum - Current page number
+ * @param {number} totalPages - Total number of pages
+ */
+function generatePageNumbers(currentPageNum, totalPages) {
+  topPageNumbersContainer.innerHTML = "";
+
+  // Calculate which pages to show (show 5 pages max)
+  let startPage = Math.max(1, currentPageNum - 2);
+  let endPage = Math.min(totalPages, currentPageNum + 2);
+
+  if (totalPages <= 5) {
+    startPage = 1;
+    endPage = totalPages;
+  } else if (currentPageNum <= 3) {
+    startPage = 1;
+    endPage = 5;
+  } else if (currentPageNum > totalPages - 3) {
+    startPage = totalPages - 4;
+    endPage = totalPages;
+  }
+
+  // Add "First" button if needed
+  if (startPage > 1) {
+    const firstBtn = createPageButton(1, "1");
+    topPageNumbersContainer.appendChild(firstBtn);
+
+    if (startPage > 2) {
+      const dots = document.createElement("span");
+      dots.className = "pagination-dots";
+      dots.textContent = "...";
+      dots.style.padding = "0 var(--spacing-sm)";
+      topPageNumbersContainer.appendChild(dots);
+    }
+  }
+
+  // Add page number buttons
+  for (let i = startPage; i <= endPage; i++) {
+    const pageBtn = createPageButton(i, String(i));
+    if (i === currentPageNum) {
+      pageBtn.classList.add("active");
+    }
+    topPageNumbersContainer.appendChild(pageBtn);
+  }
+
+  // Add "Last" button if needed
+  if (endPage < totalPages) {
+    if (endPage < totalPages - 1) {
+      const dots = document.createElement("span");
+      dots.className = "pagination-dots";
+      dots.textContent = "...";
+      dots.style.padding = "0 var(--spacing-sm)";
+      topPageNumbersContainer.appendChild(dots);
+    }
+
+    const lastBtn = createPageButton(totalPages, String(totalPages));
+    topPageNumbersContainer.appendChild(lastBtn);
+  }
+}
+
+/**
+ * Create a page number button
+ * @param {number} pageNum - Page number
+ * @param {string} displayText - Text to display
+ * @returns {HTMLElement} Page button element
+ */
+function createPageButton(pageNum, displayText) {
+  const btn = document.createElement("button");
+  btn.className = "page-number";
+  btn.textContent = displayText;
+  btn.addEventListener("click", () => {
+    currentPage = pageNum;
+    loadArticles();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
+  return btn;
 }
 
 /**
@@ -119,7 +370,7 @@ function escapeHtml(text) {
     '"': "&quot;",
     "'": "&#039;",
   };
-  return text.replace(/[&<>"']/g, (m) => map[m]);
+  return String(text).replace(/[&<>"']/g, (m) => map[m]);
 }
 
 /**
@@ -128,7 +379,7 @@ function escapeHtml(text) {
  * @returns {string} Formatted date
  */
 function formatDate(dateString) {
-  if (dateString === "N/A") return "N/A";
+  if (!dateString || dateString === "N/A") return "N/A";
   try {
     const date = new Date(dateString);
     return date.toLocaleDateString("en-US", {
@@ -142,44 +393,94 @@ function formatDate(dateString) {
 }
 
 /**
- * Search functionality
+ * Show or hide loading indicator
+ * @param {boolean} show - True to show, false to hide
  */
-searchInput.addEventListener("input", (e) => {
-  const query = e.target.value.toLowerCase();
-  const filtered = articlesData.filter(
-    (article) =>
-      article.title.toLowerCase().includes(query) ||
-      article.author.toLowerCase().includes(query),
-  );
-  renderArticles(filtered);
+function showLoading(show) {
+  loadingIndicator.style.display = show ? "block" : "none";
+}
+
+/**
+ * Show error message
+ * @param {string} message - Error message to display
+ */
+function showError(message) {
+  const errorDiv = document.createElement("div");
+  errorDiv.className = "error-message";
+  errorDiv.innerHTML = `<i class="fas fa-exclamation-triangle"></i><span>${escapeHtml(message)}</span>`;
+  const container = document.querySelector(".container");
+  const searchBox = document.querySelector(".search-box");
+  container.insertBefore(errorDiv, searchBox.nextSibling);
+
+  // Auto-remove error after 5 seconds
+  setTimeout(() => {
+    errorDiv.remove();
+  }, 5000);
+}
+
+// Event Listeners
+
+/**
+ * Search button event - Only load articles when explicitly clicked
+ */
+searchBtn.addEventListener("click", () => {
+  currentPage = 1;
+  currentFilters.author = authorInput.value;
+  currentFilters.date_from = dateFromInput.value;
+  currentFilters.date_to = dateToInput.value;
+  currentFilters.website = websiteInput.value;
+  loadArticles();
 });
 
 /**
- * Filter functionality
+ * Per page selector event - Only load when per page changes
  */
-filterButtons.forEach((btn) => {
-  btn.addEventListener("click", () => {
-    filterButtons.forEach((b) => b.classList.remove("active"));
-    btn.classList.add("active");
+perPageSelector.addEventListener("change", (e) => {
+  currentPerPage = parseInt(e.target.value);
+  currentPage = 1;
+  loadArticles();
+});
 
-    const filter = btn.dataset.filter;
-    let filtered = articlesData;
+/**
+ * Clear filters button event
+ */
+clearFiltersBtn.addEventListener("click", () => {
+  authorInput.value = "";
+  dateFromInput.value = "";
+  dateToInput.value = "";
+  websiteInput.value = "";
+  perPageSelector.value = "10";
 
-    if (filter === "recent") {
-      // Sort by date, most recent first
-      filtered = [...articlesData].sort((a, b) => {
-        const dateA = new Date(a.date);
-        const dateB = new Date(b.date);
-        return dateB - dateA;
-      });
-    } else if (filter === "today") {
-      // Filter for today's articles
-      const today = new Date().toISOString().split("T")[0];
-      filtered = articlesData.filter((a) => a.date.startsWith(today));
-    }
+  currentFilters = {
+    author: "",
+    date_from: "",
+    date_to: "",
+    website: "",
+  };
+  currentPage = 1;
+  currentPerPage = 10;
 
-    renderArticles(filtered);
-  });
+  loadArticles();
+});
+
+/**
+ * Previous page button event
+ */
+topPrevPageBtn.addEventListener("click", () => {
+  if (currentPage > 1) {
+    currentPage--;
+    loadArticles();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+});
+
+/**
+ * Next page button event
+ */
+topNextPageBtn.addEventListener("click", () => {
+  currentPage++;
+  loadArticles();
+  window.scrollTo({ top: 0, behavior: "smooth" });
 });
 
 /**
@@ -195,6 +496,7 @@ document.getElementById("clearAllBtn").addEventListener("click", async () => {
   }
 
   try {
+    showLoading(true);
     const response = await fetch("/api/clear-articles", {
       method: "POST",
       headers: {
@@ -205,9 +507,20 @@ document.getElementById("clearAllBtn").addEventListener("click", async () => {
     const data = await response.json();
 
     if (data.success) {
-      articlesData = [];
-      updateStats();
-      renderArticles([]);
+      currentPage = 1;
+      currentFilters = {
+        author: "",
+        date_from: "",
+        date_to: "",
+        website: "",
+      };
+      authorInput.value = "";
+      dateFromInput.value = "";
+      dateToInput.value = "";
+      websiteInput.value = "";
+
+      await loadFilters();
+      await loadArticles();
       alert("All articles have been deleted.");
     } else {
       showError("Failed to clear articles: " + data.message);
@@ -215,18 +528,7 @@ document.getElementById("clearAllBtn").addEventListener("click", async () => {
   } catch (error) {
     console.error("Error clearing articles:", error);
     showError("Error clearing articles: " + error.message);
+  } finally {
+    showLoading(false);
   }
 });
-
-/**
- * Show error message
- * @param {string} message - Error message to display
- */
-function showError(message) {
-  const errorDiv = document.createElement("div");
-  errorDiv.className = "error-message";
-  errorDiv.textContent = "⚠️ " + message;
-  document
-    .querySelector(".container")
-    .insertBefore(errorDiv, document.querySelector(".search-box"));
-}
