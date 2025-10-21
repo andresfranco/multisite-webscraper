@@ -1,4 +1,5 @@
 # Initialize SQLite database using SQLAlchemy ORM
+from pathlib import Path
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.exc import SQLAlchemyError
@@ -13,20 +14,22 @@ except ImportError:
 engine = None
 SessionLocal = None
 
+
 def create_connection(db_file: str):
     """Create a database engine and session factory for SQLite.
-    
+
     :param db_file: Path to the SQLite database file
     :return: SessionLocal (session factory) or None on error
     """
     global engine, SessionLocal
     try:
-        engine = create_engine(f'sqlite:///{db_file}', echo=False)
+        engine = create_engine(f"sqlite:///{db_file}", echo=False)
         SessionLocal = sessionmaker(bind=engine)
         return SessionLocal
     except SQLAlchemyError as e:
         print(f"Failed to create database connection: {e}")
         return None
+
 
 def create_tables():
     """Create all tables defined in the models using SQLAlchemy."""
@@ -35,16 +38,18 @@ def create_tables():
         print("Tables created successfully using SQLAlchemy.")
     except SQLAlchemyError as e:
         print(f"Error creating tables: {e}")
+
+
 def main():
     """Initialize the SQLAlchemy database and create tables."""
-    database = "scraper_data.db"
-    
+    database = str(Path(__file__).parent.parent / "scraper_data.db")
+
     # Create connection and session factory
     SessionLocal = create_connection(database)
     if SessionLocal is None:
         print("Error! Cannot create the database connection.")
         return
-    
+
     try:
         # Create all tables
         create_tables()
@@ -53,5 +58,5 @@ def main():
         print(f"Error initializing database: {e}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

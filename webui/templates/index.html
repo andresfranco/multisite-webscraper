@@ -1,0 +1,82 @@
+{% extends "base.html" %} {% block title %}Web Scraper - Article Collector{%
+endblock %} {% block extra_css %}
+<link
+    rel="stylesheet"
+    href="{{ url_for('static', filename='css/index.css') }}"
+/>
+{% endblock %} {% block content %}
+<div class="container">
+    <h1>📰 Web Scraper</h1>
+    <p class="subtitle">Select URLs to scrape and collect articles</p>
+
+    <form id="scraperForm">
+        <div class="form-group">
+            <label>Select URLs to Scrape</label>
+            <div class="url-list">
+                {% for url in supported_urls %}
+                <div class="url-item">
+                    <input
+                        type="checkbox"
+                        class="url-checkbox"
+                        name="urls"
+                        value="{{ url }}"
+                        checked
+                    />
+                    <span class="url-text">{{ url }}</span>
+                    {% if 'realpython.com' in url %}
+                    <span class="url-badge">Real Python</span>
+                    {% elif 'freecodecamp.org' in url %}
+                    <span class="url-badge">FreeCodeCamp</span>
+                    {% elif 'datacamp.com' in url %}
+                    <span class="url-badge">DataCamp</span>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="customUrl">Or Add Custom URL</label>
+            <textarea
+                id="customUrl"
+                placeholder="Enter one URL per line (optional)&#10;e.g., https://example.com/blog"
+            ></textarea>
+            <p class="help-text">Custom URLs will be added to your selection</p>
+            <div id="urlError" class="url-error"></div>
+        </div>
+
+        <div class="options">
+            <div class="option-group">
+                <label for="workers">Worker Threads</label>
+                <input
+                    type="number"
+                    id="workers"
+                    name="workers"
+                    value="3"
+                    min="1"
+                    max="10"
+                />
+                <p class="help-text">Number of parallel threads</p>
+            </div>
+        </div>
+
+        <div class="button-group">
+            <button type="submit" class="btn-primary" id="scrapeBtn">
+                🔍 Start Scraping
+            </button>
+            <button type="button" class="btn-secondary" id="clearBtn">
+                🗑️ Clear Data
+            </button>
+        </div>
+
+        <div id="status" class="status"></div>
+    </form>
+
+    <div class="link-group">
+        <a href="/grid">📊 View Grid</a>
+        <a href="/" onclick="location.reload()">🔄 Refresh</a>
+    </div>
+</div>
+{% endblock %} {% block extra_js %}
+<script src="{{ url_for('static', filename='js/index.js') }}"></script>
+{% endblock %}
