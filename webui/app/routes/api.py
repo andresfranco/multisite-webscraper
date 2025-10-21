@@ -125,7 +125,7 @@ def get_articles(db_service: DatabaseService) -> Tuple[dict, int]:
         - date_from: Start date for date range filter (YYYY-MM-DD, optional)
         - date_to: End date for date range filter (YYYY-MM-DD, optional)
         - page: Page number (default: 1)
-        - per_page: Items per page - 5, 10, or 20 (default: 10)
+        - per_page: Items per page - multiples of 20 for load more (default: 20)
 
     Args:
         db_service: DatabaseService instance (injected via before_request)
@@ -141,13 +141,17 @@ def get_articles(db_service: DatabaseService) -> Tuple[dict, int]:
         date_from = request.args.get("date_from", "").strip()
         date_to = request.args.get("date_to", "").strip()
         page = request.args.get("page", 1, type=int)
-        per_page = request.args.get("per_page", 10, type=int)
+        per_page = request.args.get("per_page", 20, type=int)
 
         # Validate pagination parameters
         if page < 1:
             page = 1
-        if per_page not in [5, 10, 20]:
-            per_page = 10
+        # Allow any positive per_page value for load more functionality
+        if per_page < 1:
+            per_page = 20
+        # Cap at reasonable maximum to prevent excessive memory usage
+        if per_page > 1000:
+            per_page = 1000
 
         scraper_service = get_scraper_service(db_service)
 

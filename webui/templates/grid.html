@@ -96,18 +96,6 @@ endblock %} {% block extra_css %}
                         placeholder="Type website URL..."
                     />
                 </div>
-
-                <!-- Pagination Selector -->
-                <div class="filter-group">
-                    <label for="perPageSelector" class="filter-label">
-                        <i class="fas fa-list"></i> Per Page
-                    </label>
-                    <select id="perPageSelector" class="filter-select">
-                        <option value="5">5 Items</option>
-                        <option value="10" selected>10 Items</option>
-                        <option value="20">20 Items</option>
-                    </select>
-                </div>
             </div>
 
             <!-- Action Buttons -->
@@ -150,26 +138,6 @@ endblock %} {% block extra_css %}
             class="filter-status"
             style="display: none"
         ></span>
-    </div>
-
-    <!-- Top Pagination Controls -->
-    <div
-        id="topPaginationContainer"
-        class="pagination-container"
-        style="display: none"
-    >
-        <div class="pagination-info">
-            <span id="topPaginationText">Page 1</span>
-        </div>
-        <div class="pagination-controls">
-            <button id="topPrevPageBtn" class="pagination-btn" disabled>
-                <i class="fas fa-chevron-left"></i> Previous
-            </button>
-            <div class="page-numbers" id="topPageNumbers"></div>
-            <button id="topNextPageBtn" class="pagination-btn" disabled>
-                Next <i class="fas fa-chevron-right"></i>
-            </button>
-        </div>
     </div>
 
     <!-- Articles grid -->
@@ -249,6 +217,20 @@ endblock %} {% block extra_css %}
             </div>
         </div>
         {% endif %}
+    </div>
+
+    <!-- Load More Button -->
+    <div
+        id="loadMoreContainer"
+        class="load-more-container"
+        style="display: none"
+    >
+        <button id="loadMoreBtn" class="btn btn-load-more">
+            <i class="fas fa-plus-circle"></i> Load More Articles
+        </button>
+        <p class="load-more-info">
+            <span id="loadMoreText">Showing 20 of 100 articles</span>
+        </p>
     </div>
 
     <!-- Loading indicator (hidden by default) -->

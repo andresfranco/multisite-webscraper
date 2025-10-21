@@ -7,27 +7,23 @@ const authorInput = document.getElementById("authorInput");
 const dateFromInput = document.getElementById("dateFromInput");
 const dateToInput = document.getElementById("dateToInput");
 const websiteInput = document.getElementById("websiteInput");
-const perPageSelector = document.getElementById("perPageSelector");
 const searchBtn = document.getElementById("searchBtn");
 const clearFiltersBtn = document.getElementById("clearFiltersBtn");
 const articlesContainer = document.getElementById("articleGrid");
 const loadingIndicator = document.getElementById("loadingIndicator");
-const topPaginationContainer = document.getElementById(
-  "topPaginationContainer",
-);
-const topPrevPageBtn = document.getElementById("topPrevPageBtn");
-const topNextPageBtn = document.getElementById("topNextPageBtn");
-const topPageNumbersContainer = document.getElementById("topPageNumbers");
-const topPaginationText = document.getElementById("topPaginationText");
+const loadMoreContainer = document.getElementById("loadMoreContainer");
+const loadMoreBtn = document.getElementById("loadMoreBtn");
+const loadMoreText = document.getElementById("loadMoreText");
 const resultsText = document.getElementById("resultsText");
 const filterStatus = document.getElementById("filterStatus");
 const filterChipsContainer = document.getElementById("filterChipsContainer");
 const filterChipsDiv = document.getElementById("filterChips");
 
-let currentPage = 1;
-let currentPerPage = 10;
-let allArticles = [];
+const ARTICLES_PER_LOAD = 20; // Load 20 articles at a time
+let displayedArticles = []; // Articles currently displayed
+let allArticles = []; // All articles from API
 let activeFilters = []; // Array of active filter objects
+let totalArticlesCount = 0; // Total count from API
 
 /**
  * Filter object structure:
@@ -74,10 +70,17 @@ async function loadFilters() {
 
 /**
  * Load articles from API with active filters
+ * @param {boolean} reset - If true, reset displayed articles and load from beginning
  */
-async function loadArticles() {
+async function loadArticles(reset = false) {
   try {
     showLoading(true);
+
+    // Reset if needed
+    if (reset) {
+      displayedArticles = [];
+      allArticles = [];
+    }
 
     // Build query parameters from active filters
     const params = new URLSearchParams();
@@ -91,21 +94,28 @@ async function loadArticles() {
       }
     });
 
-    params.append("page", currentPage);
-    params.append("per_page", currentPerPage);
+    // Request more articles than currently displayed to check if there are more
+    params.append("page", 1);
+    params.append("per_page", displayedArticles.length + ARTICLES_PER_LOAD);
 
     const response = await fetch(`/api/articles?${params}`);
     const data = await response.json();
 
     if (data.success) {
       allArticles = data.articles;
-      const totalCount = data.total_count;
-      const totalPages = data.total_pages;
+      totalArticlesCount = data.total_count;
 
-      updateStats(totalCount);
-      renderArticles(allArticles);
-      updatePagination(data.page, data.per_page, totalPages, totalCount);
-      updateResultsInfo(totalCount, data.count);
+      // If reset, show first batch, otherwise add new batch
+      if (reset) {
+        displayedArticles = allArticles.slice(0, ARTICLES_PER_LOAD);
+      } else {
+        displayedArticles = allArticles;
+      }
+
+      updateStats(totalArticlesCount);
+      renderArticles(displayedArticles, reset);
+      updateLoadMoreButton();
+      updateResultsInfo(totalArticlesCount, displayedArticles.length);
     } else {
       showError("Failed to load articles");
     }
@@ -120,15 +130,13 @@ async function loadArticles() {
 /**
  * Update results info display
  * @param {number} totalCount - Total articles matching filters
- * @param {number} displayCount - Articles on current page
+ * @param {number} displayCount - Articles currently displayed
  */
 function updateResultsInfo(totalCount, displayCount) {
   if (totalCount === 0) {
     resultsText.textContent = "No articles found";
   } else {
-    const start = (currentPage - 1) * currentPerPage + 1;
-    const end = Math.min(currentPage * currentPerPage, totalCount);
-    resultsText.textContent = `Showing ${start}–${end} of ${totalCount} articles`;
+    resultsText.textContent = `Showing ${displayCount} of ${totalCount} articles`;
   }
 }
 
@@ -211,8 +219,7 @@ function addFilter(type, value, label, icon, apiParam) {
   }
 
   renderFilterChips();
-  currentPage = 1;
-  loadArticles();
+  loadArticles(true); // Reset and load from beginning
 }
 
 /**
@@ -237,8 +244,7 @@ function removeFilter(filterId) {
 
     activeFilters.splice(filterIndex, 1);
     renderFilterChips();
-    currentPage = 1;
-    loadArticles();
+    loadArticles(true); // Reset and load from beginning
   }
 }
 
@@ -251,11 +257,8 @@ function clearAllFilters() {
   dateFromInput.value = "";
   dateToInput.value = "";
   websiteInput.value = "";
-  perPageSelector.value = "10";
-  currentPage = 1;
-  currentPerPage = 10;
   renderFilterChips();
-  loadArticles();
+  loadArticles(true); // Reset and load from beginning
 }
 
 /**
@@ -282,9 +285,10 @@ function updateStats(totalCount) {
 /**
  * Render articles to the grid
  * @param {Array} articles - Array of article objects to render
+ * @param {boolean} replace - If true, replace all articles; if false, append
  */
-function renderArticles(articles) {
-  if (articles.length === 0) {
+function renderArticles(articles, replace = true) {
+  if (articles.length === 0 && replace) {
     articlesContainer.innerHTML = `
       <div style="grid-column: 1/-1;">
         <div class="empty-state">
@@ -302,7 +306,7 @@ function renderArticles(articles) {
     return;
   }
 
-  articlesContainer.innerHTML = articles
+  const articlesHTML = articles
     .map(
       (article) => `
       <div class="card" data-article-id="${article.id}">
@@ -343,6 +347,12 @@ function renderArticles(articles) {
     `,
     )
     .join("");
+
+  if (replace) {
+    articlesContainer.innerHTML = articlesHTML;
+  } else {
+    articlesContainer.insertAdjacentHTML("beforeend", articlesHTML);
+  }
 }
 
 /**
@@ -357,112 +367,48 @@ function getEmptyStateMessage() {
 }
 
 /**
- * Update pagination controls
- * @param {number} page - Current page number
- * @param {number} perPage - Items per page
- * @param {number} totalPages - Total number of pages
- * @param {number} totalCount - Total number of articles
+ * Update Load More button visibility and text
  */
-function updatePagination(page, perPage, totalPages, totalCount) {
-  if (totalCount === 0) {
-    topPaginationContainer.style.display = "none";
-    return;
-  }
+function updateLoadMoreButton() {
+  const hasMore = displayedArticles.length < totalArticlesCount;
 
-  topPaginationContainer.style.display = "flex";
-  currentPage = page;
-  currentPerPage = perPage;
-
-  // Update pagination text
-  topPaginationText.textContent = `Page ${page} of ${totalPages}`;
-
-  // Update previous button
-  topPrevPageBtn.disabled = page === 1;
-
-  // Update next button
-  topNextPageBtn.disabled = page === totalPages;
-
-  // Generate page numbers
-  generatePageNumbers(page, totalPages);
-}
-
-/**
- * Generate page number buttons
- * @param {number} currentPageNum - Current page number
- * @param {number} totalPages - Total number of pages
- */
-function generatePageNumbers(currentPageNum, totalPages) {
-  topPageNumbersContainer.innerHTML = "";
-
-  // Calculate which pages to show (show 5 pages max)
-  let startPage = Math.max(1, currentPageNum - 2);
-  let endPage = Math.min(totalPages, currentPageNum + 2);
-
-  if (totalPages <= 5) {
-    startPage = 1;
-    endPage = totalPages;
-  } else if (currentPageNum <= 3) {
-    startPage = 1;
-    endPage = 5;
-  } else if (currentPageNum > totalPages - 3) {
-    startPage = totalPages - 4;
-    endPage = totalPages;
-  }
-
-  // Add "First" button if needed
-  if (startPage > 1) {
-    const firstBtn = createPageButton(1, "1");
-    topPageNumbersContainer.appendChild(firstBtn);
-
-    if (startPage > 2) {
-      const dots = document.createElement("span");
-      dots.className = "pagination-dots";
-      dots.textContent = "...";
-      dots.style.padding = "0 var(--spacing-sm)";
-      topPageNumbersContainer.appendChild(dots);
-    }
-  }
-
-  // Add page number buttons
-  for (let i = startPage; i <= endPage; i++) {
-    const pageBtn = createPageButton(i, String(i));
-    if (i === currentPageNum) {
-      pageBtn.classList.add("active");
-    }
-    topPageNumbersContainer.appendChild(pageBtn);
-  }
-
-  // Add "Last" button if needed
-  if (endPage < totalPages) {
-    if (endPage < totalPages - 1) {
-      const dots = document.createElement("span");
-      dots.className = "pagination-dots";
-      dots.textContent = "...";
-      dots.style.padding = "0 var(--spacing-sm)";
-      topPageNumbersContainer.appendChild(dots);
-    }
-
-    const lastBtn = createPageButton(totalPages, String(totalPages));
-    topPageNumbersContainer.appendChild(lastBtn);
+  if (hasMore && totalArticlesCount > 0) {
+    loadMoreContainer.style.display = "block";
+    loadMoreText.textContent = `Showing ${displayedArticles.length} of ${totalArticlesCount} articles`;
+    loadMoreBtn.disabled = false;
+  } else {
+    loadMoreContainer.style.display = "none";
   }
 }
 
 /**
- * Create a page number button
- * @param {number} pageNum - Page number
- * @param {string} displayText - Text to display
- * @returns {HTMLElement} Page button element
+ * Load more articles (next batch)
  */
-function createPageButton(pageNum, displayText) {
-  const btn = document.createElement("button");
-  btn.className = "page-number";
-  btn.textContent = displayText;
-  btn.addEventListener("click", () => {
-    currentPage = pageNum;
-    loadArticles();
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  });
-  return btn;
+async function loadMoreArticles() {
+  try {
+    loadMoreBtn.disabled = true;
+    loadMoreBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
+
+    // Load next batch
+    await loadArticles(false);
+
+    // Scroll smoothly to the first new article
+    const cards = document.querySelectorAll(".card");
+    if (cards.length > displayedArticles.length - ARTICLES_PER_LOAD) {
+      const firstNewCard = cards[displayedArticles.length - ARTICLES_PER_LOAD];
+      if (firstNewCard) {
+        firstNewCard.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }
+
+    loadMoreBtn.innerHTML =
+      '<i class="fas fa-plus-circle"></i> Load More Articles';
+  } catch (error) {
+    console.error("Error loading more articles:", error);
+    loadMoreBtn.innerHTML =
+      '<i class="fas fa-plus-circle"></i> Load More Articles';
+    loadMoreBtn.disabled = false;
+  }
 }
 
 /**
@@ -582,15 +528,6 @@ searchBtn.addEventListener("click", () => {
 });
 
 /**
- * Per page selector event - Only load when per page changes
- */
-perPageSelector.addEventListener("change", (e) => {
-  currentPerPage = parseInt(e.target.value);
-  currentPage = 1;
-  loadArticles();
-});
-
-/**
  * Clear filters button event
  */
 clearFiltersBtn.addEventListener("click", () => {
@@ -598,23 +535,10 @@ clearFiltersBtn.addEventListener("click", () => {
 });
 
 /**
- * Previous page button event
+ * Load More button event
  */
-topPrevPageBtn.addEventListener("click", () => {
-  if (currentPage > 1) {
-    currentPage--;
-    loadArticles();
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }
-});
-
-/**
- * Next page button event
- */
-topNextPageBtn.addEventListener("click", () => {
-  currentPage++;
-  loadArticles();
-  window.scrollTo({ top: 0, behavior: "smooth" });
+loadMoreBtn.addEventListener("click", () => {
+  loadMoreArticles();
 });
 
 /**
@@ -643,7 +567,7 @@ document.getElementById("clearAllBtn").addEventListener("click", async () => {
     if (data.success) {
       clearAllFilters();
       await loadFilters();
-      await loadArticles();
+      await loadArticles(true);
       alert("All articles have been deleted.");
     } else {
       showError("Failed to clear articles: " + data.message);
