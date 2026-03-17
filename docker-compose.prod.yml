@@ -1,0 +1,74 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-webscraper}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - webscraper_net
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redisdata:/data
+    networks:
+      - webscraper_net
+
+  backend:
+    build:
+      context: ./backend
+    depends_on:
+      - postgres
+      - redis
+    env_file:
+      - .env
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2
+    networks:
+      - webscraper_net
+
+  celery_worker:
+    build:
+      context: ./backend
+    depends_on:
+      - postgres
+      - redis
+    env_file:
+      - .env
+    command: celery -A celery_app worker --loglevel=info --concurrency=4
+    networks:
+      - webscraper_net
+
+  celery_beat:
+    build:
+      context: ./backend
+    depends_on:
+      - postgres
+      - redis
+    env_file:
+      - .env
+    command: celery -A celery_app beat --loglevel=info
+    networks:
+      - webscraper_net
+
+  frontend:
+    build:
+      context: ./frontend
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+    networks:
+      - webscraper_net
+
+volumes:
+  pgdata:
+  redisdata:
+
+networks:
+  webscraper_net:
+    driver: bridge

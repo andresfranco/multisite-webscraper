@@ -146,6 +146,12 @@ settings.local.py
 temp/
 tmp/
 
+# Frontend build artifacts
+node_modules/
+dist/
+frontend/node_modules/
+frontend/dist/
+
 # OS files
 Thumbs.db
 .DS_Store

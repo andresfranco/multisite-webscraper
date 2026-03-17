@@ -91,7 +91,6 @@ def test_realpython_extraction():
     print("VERIFICATION COMPLETE: Scraper is correctly following Real Python rules!")
     print("=" * 80)
     
-    return True
 
 if __name__ == '__main__':
     test_realpython_extraction()

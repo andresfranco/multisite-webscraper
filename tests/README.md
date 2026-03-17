@@ -64,7 +64,7 @@ tests/webscrapper/
 
 ```bash├── main.py                    # Entry point
 
-cd tests├── debug_analyzer.py          # Debug utilities
+cd tests
 
 pytest . -v├── scraper_data.db            # Production database
 
